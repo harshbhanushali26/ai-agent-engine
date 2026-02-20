@@ -189,35 +189,6 @@ def combine_search_results(data: CombineSearchResults):
         )
 
 
-# def _merge_results(results: list) -> str:
-#     """
-#     Merge search results into formatted text.
-    
-#     Args:
-#         results: List of search result dictionaries
-        
-#     Returns:
-#         Combined text string
-#     """
-#     combined_text = []
-    
-#     for item in results:
-#         if not isinstance(item, dict):
-#             continue
-        
-#         snippet = item.get("snippet", "").strip()
-#         if not snippet:
-#             continue
-        
-#         title = item.get("title", "").strip()
-        
-#         if title:
-#             combined_text.append(f"{title}: {snippet}")
-#         else:
-#             combined_text.append(snippet)
-    
-#     return "\n".join(combined_text)
-
 
 def _merge_results(results: list) -> str:
     """
@@ -252,8 +223,8 @@ def _merge_results(results: list) -> str:
         
         combined_text.append(snippet)
         
-        if url:
-            combined_text.append(f"(URL: {url})")
+        # if url:
+        #     combined_text.append(f"(URL: {url})")
         
         combined_text.append("")  # Blank line separator
     

@@ -163,13 +163,13 @@ def _extract_text_improved(text: str, reference: str | None) -> str | None:
     is_vague = any(keyword in reference for keyword in vague_keywords)
     
     if is_vague:
-        return _extract_top_sentences(text, reference, top_n=5)
+        return _extract_top_sentences(text, reference, top_n=7)
     
     # Strategy 3: Specific reference → find best matching sentence
     return _extract_best_sentence(text, reference)
 
 
-def _extract_top_sentences(text: str, reference: str, top_n: int = 5) -> str:
+def _extract_top_sentences(text: str, reference: str, top_n: int = 7) -> str:
     """
     Extract top N most relevant sentences.
     
