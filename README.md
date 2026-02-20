@@ -458,8 +458,8 @@ python tests/test_text_pattern.py
 - [x] Automatic recovery
 - [x] Quota management
 - [x] Organized runtime data structure
-- [ ] Progressive quota warnings (50%, 80%, 100%)
-- [ ] Token tracking per session
+- [x] Progressive quota warnings (50%, 80%, 100%)
+- [x] Token tracking per session
 
 ### Next (Phase 2)
 - [ ] RAG integration for knowledge base

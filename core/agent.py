@@ -151,7 +151,7 @@ def run_agent(
             request_id
         )
 
-        return responder_output
+        return responder_output, run_cost
 
     except PlannerValidationError as e:
         duration = time.perf_counter() - start_time

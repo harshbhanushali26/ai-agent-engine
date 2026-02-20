@@ -8,3 +8,4 @@ runtime/logs/*.log
 runtime/usage/*.json 
 runtime/telemetry/*.jsonl 
 .vscode/ 
+runtime/telemetry/summary.json 

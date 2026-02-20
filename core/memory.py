@@ -42,6 +42,20 @@ class SessionManager:
 
         self._cleanup_old_logs()
 
+        # Session-level token tracking
+        self.session_tokens = {
+            "prompt": 0,
+            "completion": 0,
+            "total": 0
+        }
+
+
+    def track_tokens(self, cost_data: dict):
+        """Aggregate tokens from query cost data."""
+        self.session_tokens["prompt"] += cost_data["prompt_tokens"] 
+        self.session_tokens["completion"] += cost_data["completion_tokens"]
+        self.session_tokens["total"] += cost_data["total_tokens"]
+
 
     def log_details(self,  query: str, cache_hit: bool, api_calls: int, response_time_ms: float):
         """
@@ -265,6 +279,18 @@ class SessionManager:
         print(f"Cache Hits: {summary['cache_hits']} ({summary['cache_hit_rate']:.1%})")
         print(f"API Calls Used: {summary['total_api_calls']}")
         print(f"Avg Response Time: {summary['avg_response_time_ms']:.0f}ms")
+
+        # Add token summary at the end
+        if self.session_tokens["total"] > 0:
+            print(f"\n💰 Token Usage This Session:")
+            print(f"   Prompt tokens: {self.session_tokens['prompt']:,}")
+            print(f"   Completion tokens: {self.session_tokens['completion']:,}")
+            print(f"   Total tokens: {self.session_tokens['total']:,}")
+            
+            # Optional: Add cost estimate
+            cost_per_1m = 0.075  # Gemini Flash pricing
+            estimated_cost = (self.session_tokens['total'] / 1_000_000) * cost_per_1m
+            print(f"   Estimated cost: ${estimated_cost:.6f}")
         print("="*50 + "\n")
 
 
