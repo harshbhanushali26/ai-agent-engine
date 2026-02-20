@@ -1,0 +1,10 @@
+# Python 
+__pycache__/ 
+*.py[cod] 
+venv/ 
+.env 
+runtime/cache/*.json 
+runtime/logs/*.log 
+runtime/usage/*.json 
+runtime/telemetry/*.jsonl 
+.vscode/ 

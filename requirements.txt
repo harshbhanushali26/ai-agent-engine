@@ -1,0 +1,9 @@
+google-genai
+openai
+pydantic
+ddgs
+python-dateutil
+dateparser
+requests
+python-dotenv
+rich
