@@ -11,5 +11,4 @@ runtime/telemetry/*.jsonl
 runtime/telemetry/summary.json 
 "" 
 "# RAG Database (ChromaDB - generated)" 
-"runtime/rag_db/" 
-"runtime/rag_db/" 
+runtime/rag_db/ 
