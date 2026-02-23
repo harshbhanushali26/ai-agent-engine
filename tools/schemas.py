@@ -328,5 +328,13 @@ class ExecutionResult(BaseModel):
 
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# RAG SCHEMAS
+# ═══════════════════════════════════════════════════════════════════════════════
 
 
+
+class RAGQueryInput(BaseModel):
+    """Input for RAG query tool."""
+    query: str
+    top_k: int = 3

@@ -9,3 +9,6 @@ runtime/usage/*.json
 runtime/telemetry/*.jsonl 
 .vscode/ 
 runtime/telemetry/summary.json 
+"" 
+"# RAG Database (ChromaDB - generated)" 
+"runtime/rag_db/" 

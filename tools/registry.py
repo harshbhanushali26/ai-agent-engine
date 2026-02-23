@@ -5,6 +5,7 @@ from tools.text.text_transform import run_text
 from tools.time.datetime import run_datetime, normalize_datetime
 from tools.web.web_search import web_search, combine_search_results
 from tools.text.extract_text import extract_from_text
+from tools.rag.knowledge_base import query_preferences
 
 
 
@@ -106,5 +107,18 @@ TOOL_REGISTRY: dict[str, ToolEntry] = {
         "cost": "medium",        # FIXED: hallucination risk
         "deterministic": False,
         "cacheable": False,      # FIXED: unsafe to cache
+    },
+
+    # ---------- RAG ----------
+
+    "query_preferences": {
+        "schema": RAGQueryInput,
+        "handler": query_preferences,
+        "requires_tool": True,
+        "max_retries": 0,
+        "timeout": 10.0,
+        "cost": "medium",
+        "deterministic": False,
+        "cacheable": False,
     },
 }

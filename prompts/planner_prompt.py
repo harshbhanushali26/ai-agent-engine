@@ -198,6 +198,38 @@ AVAILABLE TOOLS
      ✗ Invalid: {"locations": ["Boston"], "days_ahead": 20}
        // days_ahead must be 0-14
 
+9. query_preferences
+   Purpose: Query user's personal preferences, schedules, and routines
+   Args: {
+      "query": string,                     // Question about user preferences
+      "top_k": number                      // Number of results (default: 3)
+   }
+   Output: string (relevant context from knowledge base)
+   
+  IMPORTANT: 
+   - This tool accepts ONLY "query" and "top_k"
+   - DO NOT pass reference_datetime, base_datetime, or datetime-related arguments
+   - The query string can contain temporal references like "tomorrow", "today"
+   
+   Examples:
+     ✓ Best work time:
+       {"query": "when is my best focus time", "top_k": 3}
+       → "Morning Peak: 6:00-13:00 (best focus time)..."
+     
+     ✓ Schedule check:
+       {"query": "when should I avoid meetings", "top_k": 3}
+       → "Afternoon Slump: 13:00-16:00 (avoid important work)..."
+     
+     ✓ Routines:
+       {"query": "what are my daily routines", "top_k": 3}
+       → "Morning temple visit 6:00-7:30, Evening tea 17:00-18:00..."
+       
+       ✗ WRONG - Do not add datetime arguments:
+       {"query": "...", "reference_datetime": "2026-02-23"}  // Invalid!
+     
+     Note: Use this tool when user asks about their schedule, energy patterns,
+           or personal preferences. Returns context from user's knowledge base.
+
 ═══════════════════════════════════════════════════════════════════════════════
 QUERY CLASSIFICATION (CRITICAL)
 ═══════════════════════════════════════════════════════════════════════════════

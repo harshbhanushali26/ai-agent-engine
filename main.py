@@ -192,12 +192,12 @@ class QueryProcessor:
         return True
 
 
-    def _run_agent(self, query: str, request_id: str) -> Tuple[str, float]:
+    def _run_agent(self, query: str, request_id: str) -> Tuple[str, float, dict]:
         """
         Run the LLM agent.
         
         Returns:
-            (response, duration)
+            (response, duration, token_usage)
         """
         try:
             start_time = time.perf_counter()
@@ -206,7 +206,15 @@ class QueryProcessor:
             return (response, duration, token_usage)
         except Exception as e:
             logger_api.error(f"QUERY_FAILED | request_id={request_id} | error={str(e)}")
-            return (f"❌ Failed to process query: {str(e)}", 0.0)
+            # Return empty token usage on error
+            empty_tokens = {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "token_utilization_ratio": 0,
+                "budget_state": "safe"
+            }
+            return (f"❌ Failed to process query: {str(e)}", 0.0, empty_tokens)
 
 
     def get_session_stats(self) -> dict:
@@ -285,7 +293,7 @@ class CLI:
 
                 # Check for stats command
                 if query.lower() == "stats":
-                    self._print_stats(processor)
+                    self._print_stats(processor, session_manager)
                     continue
 
                 # Check quota and warn
@@ -342,17 +350,38 @@ class CLI:
     def _handle_exit(self, cache: Cache, session_manager: SessionManager, processor: QueryProcessor):
         """Handle graceful exit."""
         cache.save()
-        session_manager.print_session_summary()
-        session_manager.save_session_summary()
-
-        # Print enhanced stats
+        
+        # Get stats from both sources
         stats = processor.get_session_stats()
-        print(f"\n📊 Session Statistics:")
-        print(f"   Total queries: {stats['total_queries']}")
-        print(f"   Cache hits: {stats['cache_hits']} ({stats['cache_hit_rate']:.1f}%)")
-        print(f"   Pattern matches: {stats['pattern_matches']} ({stats['pattern_match_rate']:.1f}%)")
-        print(f"   LLM calls: {stats['cache_misses'] - stats['pattern_matches']}")
-
+        session_summary = session_manager.get_session_summary()  # ✅ Already has total_api_calls
+        
+        # Print combined summary
+        print("\n" + "="*50)
+        print("SESSION SUMMARY")
+        print("="*50)
+        print(f"Session ID: {session_summary['session_id']}")
+        print(f"Total Queries: {stats['total_queries']}")
+        print(f"Cache Hits: {stats['cache_hits']} ({stats['cache_hit_rate']:.1f}%)")
+        print(f"Pattern Matches: {stats['pattern_matches']} ({stats['pattern_match_rate']:.1f}%)")
+        
+        llm_queries = stats['cache_misses'] - stats['pattern_matches']
+        print(f"LLM Queries: {llm_queries}")
+        print(f"Total API Calls: {session_summary['total_api_calls']}")  # ✅ From session data
+        
+        # Token summary
+        if session_manager.session_tokens["total"] > 0:
+            print(f"\n💰 Token Usage:")
+            print(f"   Prompt tokens: {session_manager.session_tokens['prompt']:,}")
+            print(f"   Completion tokens: {session_manager.session_tokens['completion']:,}")
+            print(f"   Total tokens: {session_manager.session_tokens['total']:,}")
+            
+            cost_per_1m = 0.075
+            estimated_cost = (session_manager.session_tokens['total'] / 1_000_000) * cost_per_1m
+            print(f"   Estimated cost: ${estimated_cost:.6f}")
+        
+        print("="*50 + "\n")
+        
+        session_manager.save_session_summary()
         self._print_goodbye()
 
 
@@ -445,17 +474,20 @@ class CLI:
         print()
 
 
-    def _print_stats(self, processor: QueryProcessor):
+    def _print_stats(self, processor: QueryProcessor, session_manager: SessionManager):
         """Print session statistics"""
         stats = processor.get_session_stats()
+        session_summary = session_manager.get_session_summary()  # ✅ Get session data
 
         print("\n📊 Session Statistics:")
         print(f"  Total queries: {stats['total_queries']}")
         print(f"  Cache hits: {stats['cache_hits']} ({stats['cache_hit_rate']:.1f}%)")
         print(f"  Pattern matches: {stats['pattern_matches']} ({stats['pattern_match_rate']:.1f}%)")
-        print(f"  LLM calls needed: {stats['cache_misses'] - stats['pattern_matches']}")
 
-        # Combined bypass rate
+        llm_queries = stats['cache_misses'] - stats['pattern_matches']
+        print(f"  LLM queries: {llm_queries}")
+        print(f"  Total API calls: {session_summary['total_api_calls']}")  # ✅ From session data
+
         bypass_count = stats['cache_hits'] + stats['pattern_matches']
         bypass_rate = (bypass_count / stats['total_queries'] * 100) if stats['total_queries'] > 0 else 0
         print(f"  Total bypass rate: {bypass_rate:.1f}% (no LLM needed)")

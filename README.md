@@ -1,6 +1,6 @@
 # 🤖 AI Agent Engine
 
-Autonomous AI agent with deterministic routing, cost tracking, and multi-layer optimization.
+Autonomous AI agent with deterministic routing, RAG-powered personalization, and multi-layer optimization.
 
 Built from scratch in pure Python to demonstrate full control over planning, execution, recovery, and LLM usage.
 
@@ -13,10 +13,11 @@ Most agents send every query to the LLM.
 This system avoids that.
 
 ```
-Query → Cache → Pattern Router → LLM (only if required)
+Query → Cache → Pattern Router → RAG Knowledge Base → LLM (only if required)
 ```
 
 Deterministic queries are executed locally.
+Personal context is retrieved from knowledge base.
 The LLM is used only when reasoning is necessary.
 
 ---
@@ -35,22 +36,33 @@ Local execution is prioritized over model inference.
 
 ---
 
-### 2. Cost-Aware Design
+### 2. RAG-Powered Personalization (NEW)
+
+* Personal knowledge base (ChromaDB + SentenceTransformer)
+* Context-aware scheduling recommendations
+* User preferences, routines, and energy patterns
+* Fast semantic search (~30ms after model load)
+* No external API calls for personal context
+
+Knowledge base is queried before LLM invocation.
+
+---
+
+### 3. Cost-Aware Design
 
 * Token tracking per session
 * Daily API quota enforcement
 * Progressive usage warnings (50%, 80%, 100%)
 * Disk-based usage logs
-* Smart caching (skips dynamic queries like weather & datetime)
+* Smart caching (skips dynamic queries like weather, datetime, RAG)
 
 Cost visibility is built into the architecture.
 
 ---
 
-### 3. Agent Pipeline (LLM Fallback Layer)
+### 4. Agent Pipeline (LLM Fallback Layer)
 
 When routing fails:
-
 ```
 Planner → Validator → Executor → Responder
 ```
@@ -62,8 +74,8 @@ Planner → Validator → Executor → Responder
 * Replanning on structural failures
 
 The system is defensive by design.
-
 ---
+
 
 ## 💡 Example
 
@@ -75,6 +87,10 @@ Agent: 8
 You: Convert 'hello' to uppercase
 Agent: HELLO
 ⚡ Pattern match — 0 API calls
+
+You: When is my best focus time?
+Agent: Morning Peak: 6:00-13:00 (best focus time)...
+✗ LLM pipeline triggered
 
 You: What's the weather in Tokyo?
 Agent: Current weather in Tokyo is 15°C...
@@ -105,12 +121,14 @@ LLM executions: 1
 
 ```
 agent_engine/
-├── core/        # Planning, execution, routing
-├── tools/       # Calculator, datetime, text, weather, web
-├── memory/      # Persistent caching
-├── infra/       # Logging & environment
-├── runtime/     # Logs, telemetry, usage data
-├── tests/       # Deterministic layer tests
+├── app/                # system config, tool runner
+├── core/               # Planning, execution, routing, memory, validation
+├── tools/              # Calculator, datetime, text, weather, web, rag(ChromaDB knowledge base), usage tacker, tool registry, schemas
+├── infra/              # Logging & environment
+├── rag_data/
+│   └── preferences/    # User knowledge base (markdown)
+├── runtime/            # Logs, telemetry, usage data, ChromaDB storage(rag_db)
+├── tests/              # Deterministic layer tests
 └── main.py
 ```
 
@@ -120,6 +138,9 @@ agent_engine/
 
 * Python 3.11+
 * Gemini API (LLM layer)
+* ChromaDB (vector database)
+* SentenceTransformer (embeddings)
+* LangChain Text Splitters (chunking)
 * Open-Meteo (weather data)
 * DuckDuckGo Search via DDGS
 * Local AST parsing for safe math evaluation
@@ -128,7 +149,8 @@ agent_engine/
 
 ## 🎯 What This Demonstrates
 
-* Multi-layer agent optimization
+* Multi-layer agent optimization (cache → patterns → RAG → LLM)
+* RAG integration for personalized context
 * Deterministic routing before LLM invocation
 * Cost-aware AI architecture
 * Failure recovery strategies
@@ -143,19 +165,46 @@ agent_engine/
 git clone https://github.com/harshbhanushali26/ai-agent-engine.git
 cd ai-agent-engine
 pip install -r requirements.txt
+
+# Configure API
 cp .env.example .env
 # Add GEMINI_API_KEY
+
+# Load RAG knowledge base
+python -m tools.rag.loader
+
+# Run agent
 python main.py
 ```
+
+
+---
+
+## 📝 Adding Personal Preferences
+
+Edit `rag_data/preferences/user_prefs.md` with your:
+- Daily routines
+- Energy patterns
+- Scheduling preferences
+- Protected time slots
+
+Then reload:
+```bash
+python -m tools.rag.loader
+```
+
 
 ---
 
 ## 🛣️ Roadmap
 
-* RAG integration
-* Async tool execution
-* REST API layer
-* Streaming responses
+* [x] Pattern matching (math, datetime, text)
+* [x] RAG integration for personal context
+* [x] Token tracking & cost estimation
+* [ ] Async tool execution
+* [ ] REST API layer
+* [ ] Streaming responses
+* [ ] Multi-agent collaboration
 
 ---
 

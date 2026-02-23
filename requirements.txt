@@ -7,3 +7,7 @@ dateparser
 requests
 python-dotenv
 rich
+chromadb
+sentence-transformers
+langchain
+langchain_text_splitters

@@ -386,25 +386,6 @@ class Cache:
         self._cache[key] = value
 
 
-    # def _should_skip_caching(self, query: str) -> bool:
-    #     """Check if query should skip caching (dynamic data)."""
-    #     query_lower = query.lower()
-
-    #     # Skip weather queries
-    #     if 'weather' in query_lower:
-    #         return True
-
-    #     # Skip stock/crypto queries (if you add those later)
-    #     if any(word in query_lower for word in ['stock', 'price', 'ticker']):
-    #         return True
-        
-    #     # Skip "current" queries (likely dynamic)
-    #     if 'current' in query_lower and any(word in query_lower for word in ['price', 'temperature', 'status']):
-    #         return True
-        
-    #     return False
-
-
     def _should_skip_caching(self, query: str) -> bool:
         """
         Check if query should skip caching (dynamic data).
@@ -444,7 +425,39 @@ class Cache:
         # Skip stock/crypto/price queries
         if any(word in query_lower for word in ['stock', 'price', 'ticker', 'crypto', 'bitcoin']):
             return True
-        
+
+        # ── Skip personal/RAG queries (context-dependent) ──────────────
+        rag_phrases = [
+            'my energy', 'my routine', 'my habit', 'my schedule',
+            'my best', 'my focus', 'my deep work',  # Shorter phrases
+            'my walk', 'my temple', 'my tea', 'my tmkoc',
+            'when should i', 'should i schedule',
+            'when is my', 'what is my',  # Question patterns
+            'plan my', 'plan today', 'plan tomorrow',
+        ]
+
+        # Check phrases first
+        if any(phrase in query_lower for phrase in rag_phrases):
+            return True
+
+        # Fallback: word-based check
+        query_words = set(query_lower.split())
+        has_personal = bool(query_words & {'my', 'me', 'i'})
+        has_rag_context = bool(query_words & {
+            'energy', 'routine', 'habit', 'schedule', 'focus',
+            'best', 'deep', 'work', 'walk', 'temple', 'tea',  'tmkoc'
+        })
+
+        if has_personal and has_rag_context:
+            return True
+
+        # Check for personal + specific keywords
+        if 'my' in query_words or 'i' in query_words:
+            rag_keywords = {'routine', 'schedule', 'energy', 'focus', 
+                            'habit', 'time', 'best', 'deep', 'work'}
+            if query_words & rag_keywords:
+                return True
+
         return False
 
 
