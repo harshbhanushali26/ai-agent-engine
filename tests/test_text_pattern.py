@@ -9,7 +9,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from patterns.text_pattern import (
+from core.routing.text_pattern import (
     detect_operation,
     extract_quoted_text,
     extract_target_text,

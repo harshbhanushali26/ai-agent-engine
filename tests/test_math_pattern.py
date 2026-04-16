@@ -9,7 +9,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from patterns.math_pattern import (
+from core.routing.math_pattern import (
     extract_math_expression,
     is_safe_expression,
     format_math_result,

@@ -11,7 +11,7 @@ from unittest.mock import patch, MagicMock
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from patterns.datetime_pattern import (
+from core.routing.datetime_pattern import (
     match_current_datetime,
     match_day_of_week,
     match_natural_date,
@@ -64,7 +64,7 @@ def test_match_current_datetime():
     
     print("Testing match_current_datetime...")
     
-    with patch('patterns.datetime_pattern.run_datetime', return_value=mock_run_datetime_now()):
+    with patch('core.routing.datetime_pattern.run_datetime', return_value=mock_run_datetime_now()):
         # Current time
         assert match_current_datetime("What's the time?") == "02:30 PM"
         assert match_current_datetime("What time is it?") == "02:30 PM"
@@ -89,8 +89,8 @@ def test_match_day_of_week():
     def mock_normalize(input_data):
         return mock_normalize_datetime(input_data.text)
     
-    with patch('patterns.datetime_pattern.normalize_datetime', side_effect=mock_normalize):
-        with patch('patterns.datetime_pattern.run_datetime', return_value=mock_run_datetime_day_of_week()):
+    with patch('core.routing.datetime_pattern.normalize_datetime', side_effect=mock_normalize):
+        with patch('core.routing.datetime_pattern.run_datetime', return_value=mock_run_datetime_day_of_week()):
             # "What day is X"
             assert match_day_of_week("What day is tomorrow?") == "Wednesday"
             assert match_day_of_week("What day will be next Monday?") == "Wednesday"
@@ -109,7 +109,7 @@ def test_match_natural_date():
     def mock_normalize(input_data):
         return mock_normalize_datetime(input_data.text)
     
-    with patch('patterns.datetime_pattern.normalize_datetime', side_effect=mock_normalize):
+    with patch('core.routing.datetime_pattern.normalize_datetime', side_effect=mock_normalize):
         # "What date is X"
         assert match_natural_date("What date is 7 days from today?") == "February 25, 2026"
         assert match_natural_date("What date will be tomorrow?") == "February 19, 2026"
@@ -129,7 +129,7 @@ def test_match_days_in_month():
     def mock_normalize(input_data):
         return mock_normalize_datetime(input_data.text)
     
-    with patch('patterns.datetime_pattern.normalize_datetime', side_effect=mock_normalize):
+    with patch('core.routing.datetime_pattern.normalize_datetime', side_effect=mock_normalize):
         # Explicit month + year
         result = match_days_in_month("How many days in February 2026?")
         assert result == "28", f"Expected '28', got '{result}'"
@@ -151,8 +151,8 @@ def test_match_datetime_pattern():
     def mock_normalize(input_data):
         return mock_normalize_datetime(input_data.text)
     
-    with patch('patterns.datetime_pattern.normalize_datetime', side_effect=mock_normalize):
-        with patch('patterns.datetime_pattern.run_datetime') as mock_run:
+    with patch('core.routing.datetime_pattern.normalize_datetime', side_effect=mock_normalize):
+        with patch('core.routing.datetime_pattern.run_datetime') as mock_run:
             # Setup mock to return appropriate responses
             def run_datetime_side_effect(input_data):
                 if input_data.operation == "now":

@@ -119,17 +119,93 @@ LLM executions: 1
 
 ## 🏗 Architecture Overview
 
+### System Flow
+
+```mermaid
+flowchart TD
+    A["🧑 User Query"] --> B{"1️⃣ Cache Lookup"}
+    B -->|"Hit"| Z["✅ Return Cached Response"]
+    B -->|"Miss"| C{"2️⃣ Pattern Router"}
+
+    C -->|"Math"| D["🔢 Calculator (AST)"]
+    C -->|"DateTime"| E["📅 DateTime Engine"]
+    C -->|"Text"| F["📝 Text Transform"]
+    C -->|"No Match"| G{"3️⃣ RAG Check"}
+
+    D --> H["Cache & Return"]
+    E --> I["Return (no cache)"]
+    F --> H
+
+    G -->|"Personal Query"| J["🧠 ChromaDB + Embeddings"]
+    G -->|"General Query"| K["4️⃣ LLM Agent Pipeline"]
+
+    J --> K
+
+    subgraph LLM_Pipeline["LLM Agent Pipeline"]
+        K --> L["📋 Planner"]
+        L --> M["✔️ Validator"]
+        M --> N["⚙️ Executor"]
+        N --> O{"Success?"}
+        O -->|"Yes"| P["💬 Responder"]
+        O -->|"Transient Fail"| N
+        O -->|"Structural Fail"| Q["🔄 Replanner"]
+        Q --> M
+        O -->|"Terminal Fail"| P
+    end
+
+    P --> R["✅ Return Response"]
+
+    subgraph Tools["Available Tools"]
+        T1["🔢 Calculator"]
+        T2["📅 DateTime"]
+        T3["📝 Text Transform"]
+        T4["🌐 Web Search (DDGS)"]
+        T5["🌤️ Weather (Open-Meteo)"]
+        T6["🧠 RAG Query"]
+        T7["📄 Text Extraction"]
+    end
+ 
+```
+
+### Project Structure
+
 ```
 agent_engine/
-├── app/                # system config, tool runner
-├── core/               # Planning, execution, routing, memory, validation
-├── tools/              # Calculator, datetime, text, weather, web, rag(ChromaDB knowledge base), usage tacker, tool registry, schemas
-├── infra/              # Logging & environment
-├── rag_data/
-│   └── preferences/    # User knowledge base (markdown)
-├── runtime/            # Logs, telemetry, usage data, ChromaDB storage(rag_db)
-├── tests/              # Deterministic layer tests
-└── main.py
+├── app/                  # System config, tool runner
+│   ├── config.py         # Centralized configuration & limits
+│   └── runner.py         # Tool execution with retries & timeouts
+├── core/                 # Agent brain
+│   ├── agent.py          # Main orchestrator
+│   ├── planner.py        # LLM-based plan generation
+│   ├── planner_validator.py  # Plan validation (570 lines of rules)
+│   ├── executor.py       # Sequential step execution
+│   ├── responder.py      # Response generation
+│   ├── replanner.py      # Failure recovery & replanning
+│   ├── failure_classifier.py  # Transient / Structural / Terminal
+│   ├── memory.py         # Cache + Session management
+│   ├── state.py          # Dependency resolution
+│   └── routing/          # Deterministic pattern matchers
+│       ├── math_pattern.py
+│       ├── datetime_pattern.py
+│       └── text_pattern.py
+├── tools/                # Tool implementations
+│   ├── math/             # Safe AST-based calculator
+│   ├── time/             # DateTime operations
+│   ├── text/             # Text transforms & extraction
+│   ├── web/              # Web search & weather
+│   ├── rag/              # ChromaDB knowledge base
+│   ├── llm/              # LLM client
+│   ├── registry.py       # Tool registry
+│   └── schemas.py        # Pydantic schemas for all tools
+├── infra/                # Infrastructure
+│   ├── logger.py         # Structured logging system
+│   ├── env.py            # Environment variable loading
+│   └── ui.py             # CLI display helpers
+├── prompts/              # LLM prompt templates
+├── rag_data/preferences/ # User knowledge base (markdown)
+├── runtime/              # Logs, cache, telemetry, ChromaDB
+├── tests/                # Pattern matcher tests
+└── main.py               # CLI entry point
 ```
 
 ---

@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Dict, List, Optional
 from datetime import date, datetime, timedelta
 
+from infra.logger import logger_api
+
 
 
 
@@ -125,7 +127,7 @@ class SessionManager:
         try:
             self.log_dir.mkdir(parents=True, exist_ok=True)
         except OSError as e:
-            print(f"Warning: Could not create log directory: {e}", file=sys.stderr)
+            logger_api.warning(f"LOG_DIR_CREATE_FAILED | error={e}")
 
 
     def _get_todays_log_path(self) -> Path:
@@ -147,7 +149,7 @@ class SessionManager:
             with open(log_path, 'a', encoding='utf-8') as f:
                 f.write(json.dumps(entry) + '\n')
         except (IOError, OSError) as e:
-            print(f"Warning: Could not write to log file: {e}", file=sys.stderr)
+            logger_api.warning(f"LOG_WRITE_FAILED | error={e}")
 
 
     def _get_summary_path(self) -> Path:
@@ -171,7 +173,7 @@ class SessionManager:
             with open(summary_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except (IOError, json.JSONDecodeError) as e:
-            print(f"Warning: Could not load summary file: {e}", file=sys.stderr)
+            logger_api.warning(f"SUMMARY_LOAD_FAILED | error={e}")
             return {}
 
 
@@ -224,7 +226,7 @@ class SessionManager:
                 json.dump(all_summaries, f, indent=2)
 
         except (IOError, OSError) as e:
-            print(f"Warning: Could not update summary file: {e}", file=sys.stderr)
+            logger_api.warning(f"SUMMARY_UPDATE_FAILED | error={e}")
 
 
     def _get_log_files(self) -> List[Path]:
@@ -259,12 +261,12 @@ class SessionManager:
                 if file_date and file_date < cutoff_date:
                     try:
                         log_file.unlink()
-                        print(f"Deleted old log: {log_file.name}")
+                        logger_api.info(f"LOG_CLEANUP | deleted={log_file.name}")
                     except OSError as e:
-                        print(f"Warning: Could not delete {log_file.name}: {e}", file=sys.stderr)
+                        logger_api.warning(f"LOG_CLEANUP_FAILED | file={log_file.name} | error={e}")
 
         except Exception as e:
-            print(f"Warning: Cleanup failed: {e}", file=sys.stderr)
+            logger_api.warning(f"LOG_CLEANUP_ERROR | error={e}")
 
 
     def print_session_summary(self):
@@ -339,11 +341,8 @@ class Cache:
         """
         normalized = raw.strip()
 
-        # removed bcz of making every query lower case 
-        # normalized = raw.strip().lower()
-
         # Collapse multiple spaces to single space
-        normalized = re.sub(r's\+', ' ', normalized)
+        normalized = re.sub(r'\s+', ' ', normalized)
 
         # Remove spaces around single-char operators
         normalized = re.sub(r'\s*([+\-*/=%^])\s*', r'\1', normalized)
@@ -493,7 +492,7 @@ class Cache:
                 self._cache = data
 
         except (IOError, json.JSONDecodeError) as e:
-            print(f"Warning: Could not load cache from {self._cache_file}: {e}", file=sys.stderr)
+            logger_api.warning(f"CACHE_LOAD_FAILED | file={self._cache_file} | error={e}")
             self._cache = {}    # Start fresh if load fails
 
 
@@ -515,6 +514,6 @@ class Cache:
                 json.dump(self._cache, f, indent=2)
 
         except (IOError, OSError) as e:
-            print(f"Warning: Could not save cache to {self._cache_file}: {e}", file=sys.stderr)
+            logger_api.warning(f"CACHE_SAVE_FAILED | file={self._cache_file} | error={e}")
 
 

@@ -14,6 +14,7 @@ from app.config import MODEL_NAME, LOG_LLM_CALLS
 from prompts.planner_prompt import PLANNER_PROMPT, REPLAN_PROMPT
 from tools.llm.client import client
 from infra.logger import logger_planner, LogContext
+from tools.usage_tracker import track_cost
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -163,7 +164,7 @@ def _call_llm_planner(
         
         # Extract response
         raw_output = response.choices[0].message.content
-        usage = _extract_usage(response.usage)
+        usage = track_cost(response.usage)
         
         # Log response if enabled
         if LOG_LLM_CALLS:
@@ -182,28 +183,28 @@ def _call_llm_planner(
         raise
 
 
-def _extract_usage(usage_obj) -> Dict[str, Any]:
-    """
-    Extract usage information from API response.
+# def _extract_usage(usage_obj) -> Dict[str, Any]:
+#     """
+#     Extract usage information from API response.
     
-    Args:
-        usage_obj: Usage object from API response
+#     Args:
+#         usage_obj: Usage object from API response
         
-    Returns:
-        Dictionary with usage statistics
-    """
-    if not usage_obj:
-        return {
-            "prompt_tokens": 0,
-            "completion_tokens": 0,
-            "total_tokens": 0
-        }
+#     Returns:
+#         Dictionary with usage statistics
+#     """
+#     if not usage_obj:
+#         return {
+#             "prompt_tokens": 0,
+#             "completion_tokens": 0,
+#             "total_tokens": 0
+#         }
     
-    return {
-        "prompt_tokens": getattr(usage_obj, "prompt_tokens", 0),
-        "completion_tokens": getattr(usage_obj, "completion_tokens", 0),
-        "total_tokens": getattr(usage_obj, "total_tokens", 0)
-    }
+#     return {
+#         "prompt_tokens": getattr(usage_obj, "prompt_tokens", 0),
+#         "completion_tokens": getattr(usage_obj, "completion_tokens", 0),
+#         "total_tokens": getattr(usage_obj, "total_tokens", 0)
+#     }
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

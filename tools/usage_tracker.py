@@ -2,12 +2,24 @@ from app.config import MAX_CONTEXT_TOKENS, SAFE_LIMIT, WARNING_LIMIT, MODEL_NAME
 from datetime import date,datetime, timedelta
 import json
 from pathlib import Path
+from typing import Dict, Any
 
 
 USAGE_DIR = Path("runtime/usage")
 USAGE_DIR.mkdir(exist_ok=True)
 
 RETENTION_DAYS = 14  # change to 30 if needed
+
+def empty_usage() -> Dict[str, Any]:
+    """Create empty usage dictionary for template-based responses"""
+    return {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "token_utilization_ratio": 0.0,
+        "budget_state": "safe"
+    }
+
 
 def track_cost(usage):
     if isinstance(usage, dict):

@@ -219,13 +219,13 @@ def _execute_single_attempt(
         duration_ms = duration * 1000
         
         # Check timeout
-        if duration > timeout:
-            error_msg = f"Timeout exceeded ({duration:.2f}s > {timeout}s)"
-            logger_tool.error(
-                f"TOOL_TIMEOUT | tool={tool_name} | attempt={attempt} | "
-                f"duration={duration:.2f}s | timeout={timeout}s"
-            )
-            raise TimeoutError(error_msg)
+        # if duration > timeout:
+        #     error_msg = f"Timeout exceeded ({duration:.2f}s > {timeout}s)"
+        #     logger_tool.error(
+        #         f"TOOL_TIMEOUT | tool={tool_name} | attempt={attempt} | "
+        #         f"duration={duration:.2f}s | timeout={timeout}s"
+        #     )
+        #     raise TimeoutError(error_msg)
         
         # Validate response format
         if not _is_valid_response(result):

@@ -23,6 +23,7 @@ from app.config import (
 from tools.llm.client import client
 from infra.logger import logger_api, LogContext
 from prompts.responder_prompt import RESPONDER_SYSTEM_PROMPT
+from tools.usage_tracker import empty_usage, track_cost
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -84,7 +85,7 @@ def respond(
         logger_api.error(f"RESPONSE_GENERATION_ERROR | error={str(e)[:200]}")
         
         # Return fallback response
-        return FALLBACK_RESPONSES["failed"], _empty_usage()
+        return FALLBACK_RESPONSES["failed"], empty_usage()
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -101,7 +102,7 @@ def _handle_skipped(planner_output: PlannerOutput) -> Tuple[str, Dict[str, Any]]
     if planner_output.fail_reason:
         logger_api.debug(f"SKIP_REASON | reason={planner_output.fail_reason}")
     
-    return response, _empty_usage()
+    return response, empty_usage()
 
 
 def _handle_failed(
@@ -136,7 +137,7 @@ def _handle_failed(
     else:
         response = FALLBACK_RESPONSES["failed"]
     
-    return response, _empty_usage()
+    return response, empty_usage()
 
 
 def _handle_completed(
@@ -156,11 +157,7 @@ def _handle_completed(
             execution_result,
             prompt_strategy
         )
-        # return _llm_responder(
-        #     planner_output,
-        #     execution_result,
-        #     prompt_strategy
-        # )
+
         # Post-process for better formatting
         response_text = _format_response(response_text, execution_result)
         
@@ -176,7 +173,7 @@ def _handle_completed(
     else:
         response = "The request completed successfully."
     
-    return response, _empty_usage()
+    return response, empty_usage()
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -233,7 +230,7 @@ Execution Result:
     
     # Extract response
     response_text = response.choices[0].message.content
-    usage = _extract_usage(response.usage)
+    usage = track_cost(response.usage)
     
     # Log response if enabled
     if LOG_LLM_CALLS:
@@ -249,7 +246,7 @@ Execution Result:
 # HELPER FUNCTIONS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def _extract_usage(usage_obj) -> Dict[str, Any]:
+# def _extract_usage(usage_obj) -> Dict[str, Any]:
     """Extract usage information from API response"""
     if not usage_obj:
         return _empty_usage()
@@ -265,21 +262,6 @@ def _extract_usage(usage_obj) -> Dict[str, Any]:
         "token_utilization_ratio": get_token_utilization_ratio(total_tokens),
         "budget_state": get_budget_state(total_tokens)
     }
-
-
-def _empty_usage() -> Dict[str, Any]:
-    """Create empty usage dictionary for template-based responses"""
-    return {
-        "prompt_tokens": 0,
-        "completion_tokens": 0,
-        "total_tokens": 0,
-        "token_utilization_ratio": 0.0,
-        "budget_state": "safe"
-    }
-
-
-
-
 
 
 def _format_response(response_text: str, execution_result: ExecutionResult) -> str:
@@ -321,10 +303,6 @@ def _add_bullets(text: str) -> str:
     # Format as bullet list
     bullets = [f"• {item.strip()}" for item in items if item.strip()]
     return "\n".join(bullets)
-
-
-
-
 
 
 

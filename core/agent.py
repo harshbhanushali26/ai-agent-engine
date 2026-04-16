@@ -168,7 +168,12 @@ def run_agent(
             f"AGENT_QUOTA_STOP | request_id={request_id} | "
             f"duration={duration:.2f}s | reason={str(e)}"
         )
-        return "⚠️ Daily quota reached. Please try again later or switch models."
+        empty_cost = {
+            "prompt_tokens": 0, "completion_tokens": 0,
+            "total_tokens": 0, "token_utilization_ratio": 0,
+            "budget_state": "exceeded"
+        }
+        return "⚠️ Daily quota reached. Please try again later or switch models.", empty_cost
 
 
     except Exception as e:
