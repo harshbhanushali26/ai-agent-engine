@@ -183,29 +183,6 @@ def _call_llm_planner(
         raise
 
 
-# def _extract_usage(usage_obj) -> Dict[str, Any]:
-#     """
-#     Extract usage information from API response.
-    
-#     Args:
-#         usage_obj: Usage object from API response
-        
-#     Returns:
-#         Dictionary with usage statistics
-#     """
-#     if not usage_obj:
-#         return {
-#             "prompt_tokens": 0,
-#             "completion_tokens": 0,
-#             "total_tokens": 0
-#         }
-    
-#     return {
-#         "prompt_tokens": getattr(usage_obj, "prompt_tokens", 0),
-#         "completion_tokens": getattr(usage_obj, "completion_tokens", 0),
-#         "total_tokens": getattr(usage_obj, "total_tokens", 0)
-#     }
-
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # LOGGING HELPERS

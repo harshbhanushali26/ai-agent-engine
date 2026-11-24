@@ -13,6 +13,7 @@ Handles tool execution with:
 import time
 from typing import Dict
 
+from core.failure_classifier import classify_failure, FailureType
 from tools.registry import TOOL_REGISTRY
 from tools.responses import tool_response
 from infra.logger import logger_tool, LogContext
@@ -156,7 +157,7 @@ def _execute_with_retries(
             return result
         
         # Tool-declared failure (don't retry)
-        if _is_tool_declared_failure(result):
+        if _is_non_retriable_failure(result, deterministic):
             logger_tool.warning(
                 f"TOOL_DECLARED_FAIL | tool={tool_name} | error={result.get('error', 'unknown')[:100]}"
             )
@@ -219,13 +220,11 @@ def _execute_single_attempt(
         duration_ms = duration * 1000
         
         # Check timeout
-        # if duration > timeout:
-        #     error_msg = f"Timeout exceeded ({duration:.2f}s > {timeout}s)"
-        #     logger_tool.error(
-        #         f"TOOL_TIMEOUT | tool={tool_name} | attempt={attempt} | "
-        #         f"duration={duration:.2f}s | timeout={timeout}s"
-        #     )
-        #     raise TimeoutError(error_msg)
+        if duration > timeout:
+            logger_tool.warning(
+                f"TOOL_TIMEOUT_EXCEEDED | tool={tool_name} | attempt={attempt} | "
+                f"duration={duration:.2f}s | timeout={timeout}s"
+            )
         
         # Validate response format
         if not _is_valid_response(result):
@@ -267,18 +266,25 @@ def _is_valid_response(result) -> bool:
     return isinstance(result, dict) and "success" in result
 
 
-def _is_tool_declared_failure(result: dict) -> bool:
+def _is_non_retriable_failure(result: dict, deterministic: bool) -> bool:
     """
-    Check if failure is declared by the tool itself.
+    Determine whether a tool failure should NOT be retried.
     
-    Tool-declared failures have success=False with a structured response,
-    meaning the tool ran successfully but returned a failure result.
+    Non-retriable failures include:
+    - Deterministic tools (math, string formatting)
+    - Logic/validation errors (e.g. ValueError, bad syntax)
     """
-    return (
-        isinstance(result, dict) and
-        result.get("success") == False and
-        "error" in result
-    )
+    if deterministic:
+        return True
+
+    if not (isinstance(result, dict) and result.get("success") is False and "error" in result):
+        return False
+
+    error_msg = str(result.get("error", ""))
+    failure_type = classify_failure(error=error_msg)
+
+    # Only TRANSIENT errors (network, timeout, rate limit) should be retried
+    return failure_type != FailureType.TRANSIENT
 
 
 def _apply_backoff(tool_name: str, attempt: int):

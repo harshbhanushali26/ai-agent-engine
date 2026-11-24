@@ -204,6 +204,10 @@ def normalize_datetime(data: NormalizeDateTimeInput):
         # Try fast deterministic parsing first
         parsed_dt = _parse_next_weekday(text, reference_dt)
         
+        # Try relative days (e.g., "5 days from today", "3 days before now")
+        if not parsed_dt:
+            parsed_dt = _parse_relative_days(text, reference_dt)
+        
         # Fallback to general NLP parsing
         if not parsed_dt:
             parsed_dt = _parse_with_dateparser(text, reference_dt)
@@ -250,6 +254,22 @@ def _parse_next_weekday(text: str, reference_dt: datetime) -> datetime | None:
         days_ahead = 7
     
     return reference_dt + timedelta(days=days_ahead)
+
+
+def _parse_relative_days(text: str, reference_dt: datetime) -> datetime | None:
+    """Parse relative day expressions like '5 days from today' or '3 days before today'."""
+    match_after = re.match(r"(\d+)\s+days?\s+(?:from|after)\s+(?:today|now)", text)
+    if match_after:
+        days = int(match_after.group(1))
+        return reference_dt + timedelta(days=days)
+
+    match_before = re.match(r"(\d+)\s+days?\s+before\s+(?:today|now)", text)
+    if match_before:
+        days = int(match_before.group(1))
+        return reference_dt - timedelta(days=days)
+    return None
+
+
 
 
 def _parse_with_dateparser(text: str, reference_dt: datetime) -> datetime | None:

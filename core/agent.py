@@ -19,6 +19,7 @@ from tools.usage_tracker import track_cost, aggregate_costs
 from core.planner import plan_gateway
 from core.executor import execute_plan
 from core.responder import respond
+from core.state import DependencyState
 from core.planner_validator import validate_plan, PlannerValidationError
 from core.failure_classifier import FailureType, classify_failure
 from core.replanner import replan_gateway
@@ -91,16 +92,28 @@ def run_agent(
 
         # Step 2: Validate plan
         logger_api.debug(f"AGENT_VALIDATE | request_id={request_id}")
-        validated = validate_plan(planner_output, user_input)
 
-        if not validated["valid"]:
-            logger_api.error(
-                f"VALIDATION_FAILED | request_id={request_id} | "
-                f"error={validated.get('error', 'unknown')[:100]}"
-            )
-            raise PlannerValidationError(validated["error"])
-
-        normalized_plan = validated["normalized_plan"]
+        try:
+            validated = validate_plan(planner_output, user_input)
+            normalized_plan = validated["normalized_plan"]
+        except PlannerValidationError as val_err:
+            logger_api.warning(f"INITIAL_PLAN_INVALID | request_id={request_id} | error={val_err}")
+            if quota.can_call(MODEL_NAME):
+                dummy_exec_result = ExecutionResult(
+                    execution_status="failed",
+                    step_results=[],
+                    executed_steps=0,
+                    metadata={"error": str(val_err), "failed_step_id": getattr(val_err, "step_id", None)}
+                )
+                normalized_plan = replan_gateway(
+                    original_plan=planner_output,
+                    execution_result=dummy_exec_result,
+                    user_input=user_input,
+                    request_id=request_id
+                )
+                quota.record_call(MODEL_NAME)
+            else:
+                raise
 
         # Step 3: Execute with recovery
         logger_api.debug(f"AGENT_EXECUTE | request_id={request_id}")
@@ -217,6 +230,8 @@ def run_with_recovery(
     plan = initial_plan
     retries: Dict[int, int] = {}  # step_id → retry_count
     replans = 0
+    dependency_state = DependencyState()
+    step_results = []
 
     logger_api.info(
         f"RECOVERY_START | request_id={request_id} | "
@@ -225,7 +240,12 @@ def run_with_recovery(
 
     while True:
         # Execute current plan
-        executor_output = execute_plan(plan, execution_id=request_id)
+        executor_output = execute_plan(
+            plan,
+            execution_id=request_id,
+            existing_state=dependency_state,
+            existing_results=step_results
+        )
         
         # Success - return immediately
         if executor_output.execution_status == "completed":
@@ -239,6 +259,9 @@ def run_with_recovery(
         error = executor_output.metadata.get("error", "")
         failed_step_id = executor_output.metadata.get("failed_step_id")
         failed_tool = _get_tool_name(plan, failed_step_id)
+
+        # Update checkpointed successful steps
+        step_results = [r for r in executor_output.step_results if r.get("success")]
 
         logger_api.warning(
             f"RECOVERY_FAILURE | request_id={request_id} | "

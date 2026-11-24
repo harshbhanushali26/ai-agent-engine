@@ -17,13 +17,13 @@ from typing import Set, Literal
 # - gemini-2.5-flash: Balanced speed and quality
 # - gemini-3-flash-preview: Latest features
 AVAILABLE_MODELS = [
-    "gemini-2.5-flash-lite",
+    "gemini-3.5-flash-lite",
     "gemini-2.5-flash",
     "gemini-3-flash-preview"
 ]
 
 # Default model for agent operations
-MODEL_NAME: str = "gemini-2.5-flash-lite"
+MODEL_NAME: str = "gemini-3.5-flash-lite"
 
 # Gemini API base URL
 BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
@@ -57,7 +57,7 @@ CRITICAL_LIMIT: float = 0.90  # Above this: danger zone
 
 # Token cost tracking (for budgeting and alerts)
 TOKEN_COSTS = {
-    "gemini-2.5-flash-lite": {
+    "gemini-3.5-flash-lite": {
         "input": 0.000001,   # per token
         "output": 0.000004   # per token
     },

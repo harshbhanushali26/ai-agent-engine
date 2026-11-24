@@ -95,14 +95,14 @@ class DependencyState:
             try:
                 step_output = self._state[from_step]
                 
-                # Navigate to data.value
-                if "data" not in step_output:
-                    raise KeyError(f"Step {from_step} output missing 'data' field")
-                
-                if "value" not in step_output["data"]:
-                    raise KeyError(f"Step {from_step} output missing 'data.value' field")
-                
-                value = step_output["data"]["value"]
+                from_field = dep.get("from_field", "data.value")
+                current = step_output
+                for part in from_field.split("."):
+                    if isinstance(current, dict) and part in current:
+                        current = current[part]
+                    else:
+                        raise KeyError(f"Step {from_step} output missing '{from_field}' (failed at key '{part}')")
+                value = current
                 
                 # Inject into resolved args
                 resolved[to_arg] = value

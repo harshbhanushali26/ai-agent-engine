@@ -37,7 +37,9 @@ class DependencyResolutionError(Exception):
 
 def execute_plan(
     planner_output: PlannerOutput,
-    execution_id: Optional[str] = None
+    execution_id: Optional[str] = None,
+    existing_state: Optional[DependencyState] = None,
+    existing_results: Optional[list] = None
 ) -> ExecutionResult:
     """
     Execute a validated plan.
@@ -61,14 +63,19 @@ def execute_plan(
     log_execution_start(len(planner_output.steps), execution_id)
     start_time = time.perf_counter()
     
-    # Initialize execution state
-    dependency_state = DependencyState()
-    step_results = []
-    executed_steps = 0
+    # Initialize execution state (preserving existing results if resuming)
+    dependency_state = existing_state if existing_state is not None else DependencyState()
+    step_results = list(existing_results) if existing_results is not None else []
+    executed_steps = len(step_results)
     
     try:
         # Execute each step in sequence
         for step in planner_output.steps:
+            # Skip steps that already completed successfully
+            if dependency_state.has_step(step.step_id):
+                logger_executor.info(f"STEP_ALREADY_COMPLETED | step_id={step.step_id} | skipping re-execution")
+                continue
+
             step_result = _execute_single_step(
                 step=step,
                 dependency_state=dependency_state,

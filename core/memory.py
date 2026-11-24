@@ -5,9 +5,10 @@ import json
 import hashlib
 from pathlib import Path
 from typing import Dict, List, Optional
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 
 from infra.logger import logger_api
+from core.routing.router import is_cacheable_query
 
 
 
@@ -372,7 +373,7 @@ class Cache:
             return  # None strictly represents cache miss
 
         # Skip dynamic queries (weather, etc.)
-        if self._should_skip_caching(raw_key):
+        if not is_cacheable_query(raw_key):
             return
 
         key = self._hash_key(raw_key)
@@ -383,81 +384,6 @@ class Cache:
             self._cache.pop(next(iter(self._cache)))
 
         self._cache[key] = value
-
-
-    def _should_skip_caching(self, query: str) -> bool:
-        """
-        Check if query should skip caching (dynamic data).
-        
-        Skip if:
-        - Weather queries (always dynamic)
-        - Datetime queries (changes daily/hourly)
-        - Web search queries (external data, can change)
-        - Stock/price queries (frequently updated)
-        """
-        query_lower = query.lower()
-        
-        # Skip weather queries
-        if 'weather' in query_lower or 'temperature' in query_lower:
-            return True
-        
-        # Skip datetime queries (dynamic by nature)
-        datetime_indicators = [
-            'today', 'tomorrow', 'yesterday',
-            'what day is', 'what time is', 'current date', 'current time',
-            'what date is', 'days from today', 'days before today',
-            'next monday', 'next week'
-        ]
-        if any(indicator in query_lower for indicator in datetime_indicators):
-            return True
-        
-        # Skip web search queries (external data, can change)
-        web_search_indicators = [
-            'who is', 'what is', 'where is', 'when was', 'why is', 'how does',
-            'search for', 'find', 'look up',
-            'latest', 'recent', 'current', 'news about',
-            'tell me about', 'information about'
-        ]
-        if any(indicator in query_lower for indicator in web_search_indicators):
-            return True
-        
-        # Skip stock/crypto/price queries
-        if any(word in query_lower for word in ['stock', 'price', 'ticker', 'crypto', 'bitcoin']):
-            return True
-
-        # ── Skip personal/RAG queries (context-dependent) ──────────────
-        rag_phrases = [
-            'my energy', 'my routine', 'my habit', 'my schedule',
-            'my best', 'my focus', 'my deep work',  # Shorter phrases
-            'my walk', 'my temple', 'my tea', 'my tmkoc',
-            'when should i', 'should i schedule',
-            'when is my', 'what is my',  # Question patterns
-            'plan my', 'plan today', 'plan tomorrow',
-        ]
-
-        # Check phrases first
-        if any(phrase in query_lower for phrase in rag_phrases):
-            return True
-
-        # Fallback: word-based check
-        query_words = set(query_lower.split())
-        has_personal = bool(query_words & {'my', 'me', 'i'})
-        has_rag_context = bool(query_words & {
-            'energy', 'routine', 'habit', 'schedule', 'focus',
-            'best', 'deep', 'work', 'walk', 'temple', 'tea',  'tmkoc'
-        })
-
-        if has_personal and has_rag_context:
-            return True
-
-        # Check for personal + specific keywords
-        if 'my' in query_words or 'i' in query_words:
-            rag_keywords = {'routine', 'schedule', 'energy', 'focus', 
-                            'habit', 'time', 'best', 'deep', 'work'}
-            if query_words & rag_keywords:
-                return True
-
-        return False
 
 
     def clear(self):

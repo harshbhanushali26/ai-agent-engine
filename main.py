@@ -15,13 +15,11 @@ from typing import Optional, Tuple
 
 from core.agent import run_agent
 from infra.logger import setup_logging, logger_api
-from app.config import validate_config, LOG_LEVEL, LOG_FILE_PATH, MODEL_NAME
+from app.config import validate_config, LOG_LEVEL, LOG_FILE_PATH, MODEL_NAME, ENABLE_FILE_LOGGING
 from infra.ui import type_list, type_out
 from core.memory import Cache, SessionManager
 from tools.usage_tracker import QuotaManager
-from core.routing.datetime_pattern import match as match_datetime
-from core.routing.math_pattern import match as match_math
-from core.routing.text_pattern import match as match_text
+from core.routing.router import route_pattern, is_cacheable_pattern, is_cacheable_query
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -81,13 +79,13 @@ class QueryProcessor:
         self.session_cache_misses += 1
 
         # Step 2: Try pattern matching
-        pattern_response, pattern_type = self._try_pattern_matching(query)
+        pattern_response, pattern_type = route_pattern(query)
     
         if pattern_response:
             self.session_pattern_matches += 1
 
             # Cache ONLY if not dynamic pattern
-            if self._should_cache_pattern(pattern_type):
+            if is_cacheable_pattern(pattern_type):
                 self.cache.set(query, pattern_response)
 
             response_time = (time.time() - start_time) * 1000
@@ -108,88 +106,10 @@ class QueryProcessor:
         api_calls = calls_after - calls_before
 
         # Cache ONLY if not a dynamic query
-        if self._should_cache_agent_response(query):
+        if is_cacheable_query(query):
             self.cache.set(query, agent_response)
 
         return (agent_response, agent_duration, api_calls, False, token_usage)
-
-
-    def _try_pattern_matching(self, query: str) -> Tuple[Optional[str], Optional[str]]:
-        """
-        Try pattern matching in priority order.
-        
-        Returns:
-            (response, pattern_type) or (None, None)
-        """
-        # Try datetime (highest priority - most specific)
-        datetime_result = match_datetime(query)
-        if datetime_result:
-            return (datetime_result, "datetime")
-
-        # Try math (medium priority)
-        math_result = match_math(query)
-        if math_result:
-            return (math_result, "math")
-
-        # Try text (lowest priority)
-        text_result = match_text(query)
-        if text_result:
-            return (text_result, "text")
-
-        return (None, None)
-
-
-    def _should_cache_pattern(self, pattern_type: Optional[str]) -> bool:
-        """
-        Decide if pattern result should be cached.
-        
-        Rules:
-        - math: Cache (deterministic)
-        - text: Cache (deterministic)
-        - datetime: DON'T cache (dynamic)
-        """
-        return pattern_type in ["math", "text"]
-
-
-    def _should_cache_agent_response(self, query: str) -> bool:
-        """
-        Decide if agent response should be cached.
-        
-        Uses heuristics to detect if query likely used dynamic tools.
-        """
-        query_lower = query.lower()
-
-        # Don't cache datetime queries
-        datetime_indicators = [
-            'today', 'tomorrow', 'yesterday',
-            'what day is', 'what time is', 'current date', 'current time',
-            'what date is', 'days from today', 'days before today',
-            'next monday', 'next week', 'last week'
-        ]
-        if any(indicator in query_lower for indicator in datetime_indicators):
-            return False
-
-        # Don't cache web search queries
-        web_search_indicators = [
-            'who is', 'what is', 'where is', 'when was', 'why is', 'how does',
-            'search for', 'find', 'look up',
-            'latest', 'recent', 'current', 'news about',
-            'tell me about', 'information about',
-            'capital of', 'president', 'prime minister'
-        ]
-        if any(indicator in query_lower for indicator in web_search_indicators):
-            return False
-
-        # Don't cache weather queries
-        if 'weather' in query_lower or 'temperature' in query_lower:
-            return False
-
-        # Don't cache stock/crypto queries
-        if any(word in query_lower for word in ['stock', 'price', 'ticker', 'crypto']):
-            return False
-
-        # Otherwise, cache it
-        return True
 
 
     def _run_agent(self, query: str, request_id: str) -> Tuple[str, float, dict]:
@@ -508,7 +428,7 @@ def main():
         # Setup logging
         setup_logging(
             level=LOG_LEVEL,
-            log_file=LOG_FILE_PATH if hasattr(sys.modules['app.config'], 'ENABLE_FILE_LOGGING') else None
+            log_file=LOG_FILE_PATH if ENABLE_FILE_LOGGING else None
         )
 
         logger_api.info("=" * 60)
